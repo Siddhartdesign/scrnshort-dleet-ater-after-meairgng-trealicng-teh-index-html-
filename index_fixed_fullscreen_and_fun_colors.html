@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes" />
+<title>Big Time Clock — Final</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Modak&family=Oi&family=Rubik+Mono+One&family=JetBrains+Mono:wght@400&family=Space+Grotesk:wght@600&family=Inter:wght@500&display=swap" rel="stylesheet">
+  
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<style>
+  :root{
+    --ghost-bg: rgba(255,255,255,0.18);
+    --ghost-small-bg: rgba(255,255,255,0.12);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Ensure proper scaling on high DPI displays */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    height: 100vh;
+    min-height: 100vh;
+    width: 100vw;
+    background: black;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Modak', cursive;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .clock {
+    font-size: 20.8vw;
+    display: flex;
+    gap: 0.04em;
+    align-items: center;
+    padding: 0 2.5vw;
+    overflow: visible;
+    line-height: 1;
+    max-width: 95vw;
+    text-align: center;
+  }
+
+  .clock.portrait-mode {
+    flex-direction: column;
+    font-size: 38vw;
+    gap: 0;
+    padding: 0;
+    max-width: 100vw;
+    max-height: 90vh;
+  }
+
+  /* On larger screens (desktop/laptop), use viewport height to prevent overflow */
+  @media (min-width: 768px) {
+    .clock.portrait-mode {
+      font-size: min(38vw, 35vh);
+    }
+  }
+
+  /* Media query for high DPI displays (like 200% scaling) */
+  @media (min-resolution: 192dpi) {
+    .clock {
+      font-size: 19.5vw;
+    }
+    .clock.portrait-mode {
+      font-size: 36vw;
+      max-height: 90vh;
+    }
+  }
+
+  /* High DPI on larger screens */
+  @media (min-resolution: 192dpi) and (min-width: 768px) {
+    .clock.portrait-mode {
+      font-size: min(36vw, 33vh);
+    }
+  }
+
+  /* Additional support for very high resolution displays */
+  @media (min-width: 2400px) {
+    .clock {
+      font-size: 18vw;
+    }
+    .clock.portrait-mode {
+      font-size: min(34vw, 32vh);
+    }
+  }
+
+  .clock.portrait-mode #main-colon {
+    display: none;
+  }
+
+  .clock.portrait-mode #seconds-block {
+    display: none !important;
+  }
+
+  .clock.portrait-mode.vertical-separator #main-colon {
+    display: block;
+    font-size: 0.15em;
+    transform: rotate(0deg);
+  }
+
+  #seconds-block { display: inline-flex; }
+
+  .pulse {
+    animation: pulse 1s linear infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    60% { opacity: 0; transform: scale(0.85); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .hide-seconds #seconds-block { display: none; }
+
+  .ghost {
+    position: fixed;
+    width: 30px;
+    height: 30px;
+    background: var(--ghost-bg);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 120;
+    transition: background 0.2s ease, opacity 0.3s ease;
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  body.fullscreen-mode .ghost,
+  body.fullscreen-mode #ghost-color {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  body.fullscreen-mode.show-controls .ghost,
+  body.fullscreen-mode.show-controls #ghost-color {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (min-resolution: 192dpi) {
+    .ghost {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+    }
+    #ghost-color {
+      width: 32px !important;
+      height: 32px !important;
+      min-width: 32px !important;
+      min-height: 32px !important;
+    }
+  }
+
+  body.light-bg .ghost {
+    background: rgba(0,0,0,0.15);
+  }
+
+  body.light-bg #ghost-color {
+    background: rgba(0,0,0,0.1);
+  }
+
+  #ghost-seconds { left: 18px; bottom: 18px; }
+  #ghost-pro { top: 18px; left: 18px; }
+
+  #ghost-color {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width: 26px;
+    height: 26px;
+    background: var(--ghost-small-bg);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 130;
+    transition: background 0.2s ease;
+  }
+
+  #color-menu {
+    position: fixed;
+    right: 18px;
+    bottom: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 140;
+  }
+  #color-menu.active { opacity: 1; pointer-events: auto; }
+
+  .color-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.42);
+    cursor: pointer;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  @media (min-resolution: 192dpi) {
+    .color-dot {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+    }
+  }
+
+  body.light-bg .color-dot {
+    border-color: rgba(0,0,0,0.3);
+  }
+
+  #pro-panel {
+    position: fixed;
+    left: 18px;
+    top: 64px;
+    width: 260px;
+    max-width: calc(100vw - 40px);
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(7px);
+    font-family: Helvetica, Arial, sans-serif;
+    color: #fff;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 150;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  @media (min-resolution: 192dpi) {
+    #pro-panel {
+      width: 300px;
+      font-size: 15px;
+      padding: 14px;
+    }
+  }
+
+  body.light-bg #pro-panel {
+    background: rgba(0,0,0,0.05);
+    color: #000;
+  }
+
+  body.light-bg #pro-panel h4 {
+    color: #000;
+  }
+
+  body.light-bg .toggle-circle {
+    border-color: #000;
+  }
+
+  body.light-bg .toggle-circle.active::after {
+    background: #000;
+  }
+
+  #pro-panel.active { opacity: 1; pointer-events: auto; }
+
+  .pro-row {
+    margin: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .toggle-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    min-width: 18px;
+    min-height: 18px;
+  }
+  .toggle-circle.active::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+  }
+
+  @media (min-resolution: 192dpi) {
+    .toggle-circle {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      min-height: 22px;
+    }
+    .toggle-circle.active::after {
+      top: 4px;
+      left: 4px;
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  .font-selector {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .font-option {
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s ease;
+  }
+
+  body.light-bg .font-option {
+    background: rgba(0,0,0,0.1);
+  }
+
+  .font-option.active {
+    background: rgba(255,255,255,0.3);
+  }
+
+  body.light-bg .font-option.active {
+    background: rgba(0,0,0,0.3);
+  }
+
+  .color-target-option {
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s ease;
+  }
+
+  body.light-bg .color-target-option {
+    background: rgba(0,0,0,0.1);
+  }
+
+  .color-target-option.active {
+    background: rgba(100,200,255,0.4);
+  }
+
+  body.light-bg .color-target-option.active {
+    background: rgba(100,150,255,0.4);
+  }
+
+  .screenshot-preset {
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-bottom: 4px;
+    transition: background 0.2s ease;
+  }
+
+  .screenshot-preset:hover {
+    background: rgba(255,255,255,0.15);
+  }
+
+  body.light-bg .screenshot-preset {
+    background: rgba(0,0,0,0.08);
+  }
+
+  body.light-bg .screenshot-preset:hover {
+    background: rgba(0,0,0,0.15);
+  }
+
+  .indent {
+    padding-left: 12px;
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  #freeze-zone {
+    position: fixed;
+    bottom: 140px;
+    left: 20px;
+    width: 120px;
+    height: 120px;
+    z-index: 200;
+    background: transparent;
+  }
+
+  @media (min-resolution: 192dpi) {
+    #freeze-zone {
+      width: 140px;
+      height: 140px;
+    }
+  }
+
+  /* Ensure buttons and interactive elements are properly sized */
+  button, a {
+    min-height: 32px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+
+  @media (min-resolution: 192dpi) {
+    button, a {
+      min-height: 36px;
+      padding: 8px 14px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="clock" id="clock">
+  <span id="hours">00</span>
+  <span id="main-colon">:</span>
+  <span id="minutes">00</span>
+  <span id="seconds-block">
+    <span id="sec-colon">:</span>
+    <span id="seconds">00</span>
+  </span>
+</div>
+
+<div id="ghost-pro" class="ghost"></div>
+<div id="ghost-seconds" class="ghost"></div>
+<div id="ghost-color"></div>
+
+<div id="freeze-zone"></div>
+
+<div id="color-menu">
+  <div class="color-dot" data-preset="white-black" style="background:#fff"></div>
+  <div class="color-dot" data-preset="black-white" style="background:#000"></div>
+  <div class="color-dot" data-preset="cyan-dark" style="background:#00eaff"></div>
+  <div class="color-dot" data-preset="neon-green" style="background:#39ff14"></div>
+  <div class="color-dot" data-preset="hot-pink" style="background:#ff0077"></div>
+  <div class="color-dot" data-preset="orange" style="background:#ff9100"></div>
+  <div class="color-dot" data-preset="purple" style="background:#b400ff"></div>
+  <div class="color-dot" data-preset="google-mix" style="background:linear-gradient(135deg, #4285f4 0%, #ea4335 50%, #fbbc04 100%)"></div>
+  <!-- Custom saved presets will appear here -->
+  <div id="custom-presets-container"></div>
+</div>
+
+<div id="pro-panel">
+  <h4>Settings</h4>
+
+  <div class="pro-row">
+    <div>12-Hour Format</div>
+    <div id="toggle12" class="toggle-circle"></div>
+  </div>
+
+  <div class="pro-row">
+    <div>Portrait Mode</div>
+    <div id="togglePortrait" class="toggle-circle"></div>
+  </div>
+
+  <div class="pro-row indent">
+    <div>Vertical Separator</div>
+    <div id="toggleVerticalSep" class="toggle-circle"></div>
+  </div>
+
+  <div class="pro-row">
+    <div>Fullscreen Mode</div>
+    <div id="toggleFullscreen" class="toggle-circle"></div>
+  </div>
+
+  <h4>Typeface</h4>
+  <div class="font-selector">
+    <div class="font-option" data-font="Modak">Default</div>
+    <div class="font-option" data-font="Oi">Oi</div>
+    <div class="font-option" data-font="Rubik Mono One">Rubik</div>
+    <div class="font-option" data-font="JetBrains Mono">JetBrains</div>
+    <div class="font-option" data-font="Space Grotesk">Space</div>
+    <div class="font-option" data-font="Inter">Inter</div>
+  </div>
+
+  <h4 style="color: #ff9100;">📸 Screenshot Presets (TEMP)</h4>
+  <div id="screenshot-presets" style="max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; margin-bottom: 12px;">
+    <div class="screenshot-preset" data-preset="fun1">FUN1-bubblegum</div>
+    <div class="screenshot-preset" data-preset="fun2">FUN2-electric</div>
+    <div class="screenshot-preset" data-preset="fun3">FUN3-sunset</div>
+    <div class="screenshot-preset" data-preset="fun4">FUN4-cyberpunk</div>
+    <div class="screenshot-preset" data-preset="fun5">FUN5-candy</div>
+    <div class="screenshot-preset" data-preset="s1">S1-neutral</div>
+    <div class="screenshot-preset" data-preset="s2">S2-paper</div>
+    <div class="screenshot-preset" data-preset="s3">S3-neon</div>
+    <div class="screenshot-preset" data-preset="s4">S4-cinema</div>
+    <div class="screenshot-preset" data-preset="s6">S6-contrast</div>
+    <div class="screenshot-preset" data-preset="l1">L1-graphite</div>
+    <div class="screenshot-preset" data-preset="l2">L2-stone</div>
+    <div class="screenshot-preset" data-preset="l3">L3-techblue</div>
+    <div class="screenshot-preset" data-preset="l4">L4-rose</div>
+    <div class="screenshot-preset" data-preset="l5">L5-teal</div>
+    <div class="screenshot-preset" data-preset="l6">L6-bronze</div>
+    <div class="screenshot-preset" data-preset="l7">L7-amber</div>
+    <div class="screenshot-preset" data-preset="l8">L8-grey</div>
+    <div class="screenshot-preset" data-preset="l9">L9-violet</div>
+    <div class="screenshot-preset" data-preset="mc1">MC1-multi-subtle</div>
+    <div class="screenshot-preset" data-preset="mc2">MC2-multi-play</div>
+    <div class="screenshot-preset" data-preset="s5">S5-portrait-calm</div>
+    <div class="screenshot-preset" data-preset="p2">P2-portrait-neutral</div>
+  </div>
+
+  <h4 style="color: #ff6b6b;">🎨 Custom Colors (TEMP)</h4>
+  
+  <div class="pro-row">
+    <div>Color Mode</div>
+    <div id="toggleColorMode" class="toggle-circle"></div>
+  </div>
+
+  <div id="custom-color-panel" style="display: none; margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+    
+    <div style="margin-bottom: 12px;">
+      <label style="font-size: 12px; opacity: 0.8;">Apply to:</label>
+      <div class="font-selector" style="margin-top: 4px;">
+        <div class="color-target-option active" data-target="all">All</div>
+        <div class="color-target-option" data-target="hours">HH</div>
+        <div class="color-target-option" data-target="minutes">MM</div>
+        <div class="color-target-option" data-target="seconds">SS</div>
+        <div class="color-target-option" data-target="bg">BG</div>
+      </div>
+    </div>
+
+    <!-- Color Picker (Easy Mode) -->
+    <div style="margin-bottom: 12px;">
+      <label style="font-size: 11px; opacity: 0.7;">Quick Pick:</label>
+      <input type="color" id="color-picker" value="#ffffff" style="width: 100%; height: 36px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; background: transparent;">
+    </div>
+
+    <!-- RGB Sliders -->
+    <div style="margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="font-size: 11px; opacity: 0.7;">R</label>
+        <input type="number" id="rgb-r" min="0" max="255" value="255" style="width: 50px; padding: 3px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; font-size: 12px; text-align: center;">
+      </div>
+      <input type="range" id="slider-r" min="0" max="255" value="255" style="width: 100%; height: 6px; cursor: pointer;">
+    </div>
+
+    <div style="margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="font-size: 11px; opacity: 0.7;">G</label>
+        <input type="number" id="rgb-g" min="0" max="255" value="255" style="width: 50px; padding: 3px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; font-size: 12px; text-align: center;">
+      </div>
+      <input type="range" id="slider-g" min="0" max="255" value="255" style="width: 100%; height: 6px; cursor: pointer;">
+    </div>
+
+    <div style="margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="font-size: 11px; opacity: 0.7;">B</label>
+        <input type="number" id="rgb-b" min="0" max="255" value="255" style="width: 50px; padding: 3px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; color: white; font-size: 12px; text-align: center;">
+      </div>
+      <input type="range" id="slider-b" min="0" max="255" value="255" style="width: 100%; height: 6px; cursor: pointer;">
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <div id="color-preview" style="width: 40px; height: 40px; border-radius: 6px; background: rgb(255,255,255); border: 2px solid rgba(255,255,255,0.3);"></div>
+      <button id="apply-custom-color" style="flex: 1; padding: 8px; background: rgba(100,200,255,0.3); border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px;">Apply</button>
+    </div>
+
+    <button id="save-as-preset" style="width: 100%; padding: 8px; background: rgba(255,180,100,0.3); border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 12px; margin-bottom: 8px;">💾 Save Current Colors as Preset</button>
+
+    <div style="font-size: 10px; opacity: 0.6; margin-top: 8px;">
+      💡 Use color picker OR sliders, then Apply. Save your favorites as presets!
+    </div>
+  </div>
+
+  <h4>Pro Features</h4>
+  <div class="pro-row"><div>Pro Color Palettes</div><button>Preview</button></div>
+  <div class="pro-row"><div>Glass-Morphism</div><button>Preview</button></div>
+  <div class="pro-row"><div>Buy Me a Coffee</div><a href="https://buymeacoffee.com" target="_blank">Buy</a></div>
+</div>
+
+<script>
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
+const colorPresets = {
+  "white-black": { h: "#fff", m: "#fff", s: "#fff", bg: "#000", light: false },
+  "black-white": { h: "#000", m: "#000", s: "#000", bg: "#fff", light: true },
+  "cyan-dark": { h: "#00eaff", m: "#00eaff", s: "#00eaff", bg: "#00141a", light: false },
+  "neon-green": { h: "#39ff14", m: "#39ff14", s: "#39ff14", bg: "#061a00", light: false },
+  "hot-pink": { h: "#ff0077", m: "#ff0077", s: "#ff0077", bg: "#1a0010", light: false },
+  "orange": { h: "#ff9100", m: "#ff9100", s: "#ff9100", bg: "#1a0d00", light: false },
+  "purple": { h: "#b400ff", m: "#b400ff", s: "#b400ff", bg: "#15001a", light: false },
+  "google-mix": { h: "#4285f4", m: "#ea4335", s: "#fbbc04", bg: "#f8f9fa", light: true }
+};
+
+const screenshotPresets = {
+  "fun1": { h: "#00FF00", m: "#00FF00", s: "#00FF00", bg: "#8B00FF", light: false, secondsOn: true, portrait: false },
+  "fun2": { h: "#FF1493", m: "#FF1493", s: "#FF1493", bg: "#00CED1", light: false, secondsOn: true, portrait: false },
+  "fun3": { h: "#FFFF00", m: "#FFFF00", s: "#FFFF00", bg: "#FF1493", light: false, secondsOn: true, portrait: false },
+  "fun4": { h: "#00FFFF", m: "#00FFFF", s: "#00FFFF", bg: "#FF4500", light: false, secondsOn: true, portrait: false },
+  "fun5": { h: "#FF00FF", m: "#FF00FF", s: "#FF00FF", bg: "#32CD32", light: false, secondsOn: true, portrait: false },
+  "s1": { h: "#EBEBEB", m: "#EBEBEB", s: "#EBEBEB", bg: "#121214", light: false, secondsOn: false, portrait: false },
+  "s2": { h: "#2A2420", m: "#2A2420", s: "#2A2420", bg: "#F4ECDC", light: true, secondsOn: false, portrait: false },
+  "s3": { h: "#40C6FF", m: "#40C6FF", s: "#40C6FF", bg: "#080A12", light: false, secondsOn: true, portrait: false },
+  "s4": { h: "#D2B6A0", m: "#D2B6A0", s: "#D2B6A0", bg: "#2A080A", light: false, secondsOn: false, portrait: false },
+  "s6": { h: "#0C0C0C", m: "#0C0C0C", s: "#0C0C0C", bg: "#F5F5F5", light: true, secondsOn: false, portrait: false },
+  "l1": { h: "#DCE0E6", m: "#DCE0E6", s: "#DCE0E6", bg: "#16181C", light: false, secondsOn: false, portrait: false },
+  "l2": { h: "#1E2226", m: "#1E2226", s: "#1E2226", bg: "#E8E4DE", light: true, secondsOn: false, portrait: false },
+  "l3": { h: "#8CB4FF", m: "#8CB4FF", s: "#8CB4FF", bg: "#0C1018", light: false, secondsOn: true, portrait: false },
+  "l4": { h: "#EED2D6", m: "#EED2D6", s: "#EED2D6", bg: "#201218", light: false, secondsOn: false, portrait: false },
+  "l5": { h: "#C6E4D6", m: "#C6E4D6", s: "#C6E4D6", bg: "#141E1A", light: false, secondsOn: false, portrait: false },
+  "l6": { h: "#E6D2AA", m: "#E6D2AA", s: "#E6D2AA", bg: "#241E14", light: false, secondsOn: false, portrait: false },
+  "l7": { h: "#FFBE50", m: "#FFBE50", s: "#FFBE50", bg: "#0A0A0A", light: false, secondsOn: true, portrait: false },
+  "l8": { h: "#30363C", m: "#30363C", s: "#30363C", bg: "#F0F2F4", light: true, secondsOn: false, portrait: false },
+  "l9": { h: "#C8BEE6", m: "#C8BEE6", s: "#C8BEE6", bg: "#1C1626", light: false, secondsOn: false, portrait: false },
+  "mc1": { h: "#E6E6E8", m: "#AAC8D2", s: "#78A0B4", bg: "#14161A", light: false, secondsOn: true, portrait: false },
+  "mc2": { h: "#FF5A5A", m: "#FFD25A", s: "#78C8FF", bg: "#0C0A12", light: false, secondsOn: true, portrait: false },
+  "s5": { h: "#B6D6C6", m: "#B6D6C6", s: "#B6D6C6", bg: "#101614", light: false, secondsOn: false, portrait: true },
+  "p2": { h: "#D2D2D2", m: "#D2D2D2", s: "#D2D2D2", bg: "#1C1C1C", light: false, secondsOn: false, portrait: true }
+};
+
+let use24h = localStorage.getItem("use24h") !== "false";
+let secondsOn = localStorage.getItem("secondsOn") !== "false";
+let portraitMode = localStorage.getItem("portraitMode") === "true";
+let verticalSeparator = localStorage.getItem("verticalSeparator") === "true";
+let fullscreenMode = localStorage.getItem("fullscreenMode") === "true";
+let currentFont = localStorage.getItem("clockFont") || "Modak";
+let currentPreset = localStorage.getItem("colorPreset") || "white-black";
+let customColorMode = localStorage.getItem("customColorMode") === "true";
+let customColors = JSON.parse(localStorage.getItem("customColors") || '{"hours":"#fff","minutes":"#fff","seconds":"#fff","bg":"#000"}');
+let savedCustomPresets = JSON.parse(localStorage.getItem("savedCustomPresets") || '[]');
+
+let screenshotMode = true;
+let frozen = false;
+let frozenTime = null;
+let currentColorTarget = "all";
+
+// Fullscreen activity tracking
+let activityTimer = null;
+let lastTapTime = 0;
+
+const hoursEl = document.getElementById("hours");
+const minutesEl = document.getElementById("minutes");
+const secondsEl = document.getElementById("seconds");
+const mainColon = document.getElementById("main-colon");
+const clockEl = document.getElementById("clock");
+
+// Custom color picker elements
+const toggleColorMode = document.getElementById("toggleColorMode");
+const customColorPanel = document.getElementById("custom-color-panel");
+const colorTargetOptions = document.querySelectorAll(".color-target-option");
+const colorPicker = document.getElementById("color-picker");
+const rgbR = document.getElementById("rgb-r");
+const rgbG = document.getElementById("rgb-g");
+const rgbB = document.getElementById("rgb-b");
+const sliderR = document.getElementById("slider-r");
+const sliderG = document.getElementById("slider-g");
+const sliderB = document.getElementById("slider-b");
+const colorPreview = document.getElementById("color-preview");
+const applyCustomColorBtn = document.getElementById("apply-custom-color");
+const saveAsPresetBtn = document.getElementById("save-as-preset");
+const customPresetsContainer = document.getElementById("custom-presets-container");
+
+function createCustomPresetDot(preset, index) {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot custom-preset-dot';
+  dot.dataset.customIndex = index;
+  
+  // Create visual representation - show hours color prominently
+  dot.style.background = preset.hours;
+  dot.style.position = 'relative';
+  
+  // Add delete button
+  const deleteBtn = document.createElement('div');
+  deleteBtn.innerHTML = '×';
+  deleteBtn.style.cssText = 'position: absolute; top: -4px; right: -4px; width: 16px; height: 16px; background: rgba(255,50,50,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; opacity: 0; transition: opacity 0.2s;';
+  dot.appendChild(deleteBtn);
+  
+  dot.addEventListener('mouseenter', () => deleteBtn.style.opacity = '1');
+  dot.addEventListener('mouseleave', () => deleteBtn.style.opacity = '0');
+  
+  // Click to apply preset
+  dot.addEventListener('click', (e) => {
+    if (e.target === deleteBtn) {
+      // Delete preset
+      savedCustomPresets.splice(index, 1);
+      localStorage.setItem("savedCustomPresets", JSON.stringify(savedCustomPresets));
+      loadCustomPresets();
+    } else {
+      // Apply preset
+      customColors = {...preset};
+      localStorage.setItem("customColors", JSON.stringify(customColors));
+      if (customColorMode) {
+        applyCustomColors();
+      }
+      document.getElementById("color-menu").classList.remove("active");
+    }
+  });
+  
+  return dot;
+}
+
+function loadCustomPresets() {
+  customPresetsContainer.innerHTML = '';
+  savedCustomPresets.forEach((preset, index) => {
+    customPresetsContainer.appendChild(createCustomPresetDot(preset, index));
+  });
+}
+
+function saveCurrentAsPreset() {
+  // Save current custom colors as a preset
+  const newPreset = {...customColors};
+  savedCustomPresets.push(newPreset);
+  localStorage.setItem("savedCustomPresets", JSON.stringify(savedCustomPresets));
+  loadCustomPresets();
+  
+  // Visual feedback
+  saveAsPresetBtn.textContent = '✓ Saved!';
+  setTimeout(() => {
+    saveAsPresetBtn.textContent = '💾 Save Current Colors as Preset';
+  }, 1500);
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? "0" + hex : hex;
+  }).join('');
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function updateColorPreview() {
+  const r = parseInt(rgbR.value) || 0;
+  const g = parseInt(rgbG.value) || 0;
+  const b = parseInt(rgbB.value) || 0;
+  const color = `rgb(${r},${g},${b})`;
+  colorPreview.style.background = color;
+  
+  // Update color picker to match
+  colorPicker.value = rgbToHex(r, g, b);
+}
+
+function updateFromColorPicker() {
+  const rgb = hexToRgb(colorPicker.value);
+  if (rgb) {
+    rgbR.value = rgb.r;
+    rgbG.value = rgb.g;
+    rgbB.value = rgb.b;
+    sliderR.value = rgb.r;
+    sliderG.value = rgb.g;
+    sliderB.value = rgb.b;
+    updateColorPreview();
+  }
+}
+
+function syncSliderToInput(slider, input) {
+  slider.addEventListener("input", () => {
+    input.value = slider.value;
+    updateColorPreview();
+  });
+}
+
+function syncInputToSlider(input, slider) {
+  input.addEventListener("input", () => {
+    slider.value = input.value;
+    updateColorPreview();
+  });
+}
+
+function applyCustomColors() {
+  if (!customColorMode) return;
+  
+  hoursEl.style.color = customColors.hours;
+  minutesEl.style.color = customColors.minutes;
+  secondsEl.style.color = customColors.seconds;
+  mainColon.style.color = customColors.minutes;
+  document.getElementById("sec-colon").style.color = customColors.seconds;
+  document.body.style.background = customColors.bg;
+  
+  // Detect if background is light
+  const rgb = customColors.bg.match(/\d+/g);
+  if (rgb) {
+    const brightness = (parseInt(rgb[0]) * 299 + parseInt(rgb[1]) * 587 + parseInt(rgb[2]) * 114) / 1000;
+    if (brightness > 128) {
+      document.body.classList.add('light-bg');
+    } else {
+      document.body.classList.remove('light-bg');
+    }
+  }
+}
+
+// Toggle custom color mode
+if (customColorMode) {
+  toggleColorMode.classList.add("active");
+  customColorPanel.style.display = "block";
+}
+
+toggleColorMode.addEventListener("click", () => {
+  customColorMode = !customColorMode;
+  localStorage.setItem("customColorMode", customColorMode);
+  toggleColorMode.classList.toggle("active");
+  customColorPanel.style.display = customColorMode ? "block" : "none";
+  
+  if (customColorMode) {
+    applyCustomColors();
+  } else {
+    applyColorPreset();
+  }
+});
+
+// Color target selection
+colorTargetOptions.forEach(opt => {
+  opt.addEventListener("click", () => {
+    colorTargetOptions.forEach(o => o.classList.remove("active"));
+    opt.classList.add("active");
+    currentColorTarget = opt.dataset.target;
+    
+    // Load current color values for selected target
+    if (currentColorTarget === "bg") {
+      const rgb = customColors.bg.match(/\d+/g) || [0,0,0];
+      rgbR.value = sliderR.value = rgb[0];
+      rgbG.value = sliderG.value = rgb[1];
+      rgbB.value = sliderB.value = rgb[2];
+    } else if (currentColorTarget !== "all") {
+      const rgb = customColors[currentColorTarget].match(/\d+/g) || [255,255,255];
+      rgbR.value = sliderR.value = rgb[0];
+      rgbG.value = sliderG.value = rgb[1];
+      rgbB.value = sliderB.value = rgb[2];
+    }
+    updateColorPreview();
+  });
+});
+
+// Sync sliders with inputs
+syncSliderToInput(sliderR, rgbR);
+syncSliderToInput(sliderG, rgbG);
+syncSliderToInput(sliderB, rgbB);
+syncInputToSlider(rgbR, sliderR);
+syncInputToSlider(rgbG, sliderG);
+syncInputToSlider(rgbB, sliderB);
+
+// Color picker updates RGB
+colorPicker.addEventListener("input", updateFromColorPicker);
+
+// Apply custom color
+applyCustomColorBtn.addEventListener("click", () => {
+  const r = parseInt(rgbR.value) || 0;
+  const g = parseInt(rgbG.value) || 0;
+  const b = parseInt(rgbB.value) || 0;
+  const color = `rgb(${r},${g},${b})`;
+  
+  if (currentColorTarget === "all") {
+    customColors.hours = color;
+    customColors.minutes = color;
+    customColors.seconds = color;
+  } else if (currentColorTarget === "bg") {
+    customColors.bg = color;
+  } else {
+    customColors[currentColorTarget] = color;
+  }
+  
+  localStorage.setItem("customColors", JSON.stringify(customColors));
+  applyCustomColors();
+});
+
+// Save current colors as preset
+saveAsPresetBtn.addEventListener("click", saveCurrentAsPreset);
+
+// Load saved custom presets
+loadCustomPresets();
+
+// Initialize preview
+updateColorPreview();
+
+function applyFont() {
+  document.body.style.fontFamily = `'${currentFont}', cursive`;
+  document.querySelectorAll('.font-option').forEach(opt => {
+    opt.classList.toggle('active', opt.dataset.font === currentFont);
+  });
+}
+
+function applyColorPreset() {
+  if (customColorMode) {
+    applyCustomColors();
+    return;
+  }
+  
+  const preset = colorPresets[currentPreset];
+  if (!preset) return;
+  
+  hoursEl.style.color = preset.h;
+  minutesEl.style.color = preset.m;
+  secondsEl.style.color = preset.s;
+  mainColon.style.color = preset.m;
+  document.getElementById("sec-colon").style.color = preset.s;
+  document.body.style.background = preset.bg;
+  
+  if (preset.light) {
+    document.body.classList.add('light-bg');
+  } else {
+    document.body.classList.remove('light-bg');
+  }
+}
+
+function applyScreenshotPreset(presetId) {
+  const preset = screenshotPresets[presetId];
+  if (!preset) return;
+  
+  // Apply colors
+  hoursEl.style.color = preset.h;
+  minutesEl.style.color = preset.m;
+  secondsEl.style.color = preset.s;
+  mainColon.style.color = preset.m;
+  document.getElementById("sec-colon").style.color = preset.s;
+  document.body.style.background = preset.bg;
+  
+  // Apply light/dark mode
+  if (preset.light) {
+    document.body.classList.add('light-bg');
+  } else {
+    document.body.classList.remove('light-bg');
+  }
+  
+  // Apply seconds visibility
+  if (preset.secondsOn !== secondsOn) {
+    secondsOn = preset.secondsOn;
+    localStorage.setItem("secondsOn", secondsOn);
+    applyAnimations();
+  }
+  
+  // Apply portrait mode
+  if (preset.portrait !== portraitMode) {
+    portraitMode = preset.portrait;
+    localStorage.setItem("portraitMode", portraitMode);
+    const togglePortrait = document.getElementById("togglePortrait");
+    if (portraitMode) {
+      togglePortrait.classList.add("active");
+    } else {
+      togglePortrait.classList.remove("active");
+    }
+    applyPortraitMode();
+  }
+  
+  // Close settings panel
+  document.getElementById("pro-panel").classList.remove("active");
+}
+
+function updateClock(){
+  const now = frozen && frozenTime ? frozenTime : new Date();
+
+  let h = now.getHours();
+  let m = now.getMinutes();
+  let s = now.getSeconds();
+
+  if (!use24h) h = (h % 12) || 12;
+
+  // Always show leading zero for hours
+  hoursEl.textContent = String(h).padStart(2,"0");
+  minutesEl.textContent = String(m).padStart(2,"0");
+  secondsEl.textContent = String(s).padStart(2,"0");
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+function applyAnimations(){
+  if (frozen) {
+    secondsEl.classList.remove("pulse");
+    mainColon.classList.remove("pulse");
+    return;
+  }
+  
+  if (secondsOn){
+    clockEl.classList.remove("hide-seconds");
+    mainColon.classList.remove("pulse");
+    secondsEl.classList.add("pulse");
+  } else {
+    clockEl.classList.add("hide-seconds");
+    secondsEl.classList.remove("pulse");
+    mainColon.classList.add("pulse");
+  }
+}
+
+function applyPortraitMode(){
+  if (portraitMode) {
+    clockEl.classList.add("portrait-mode");
+  } else {
+    clockEl.classList.remove("portrait-mode");
+  }
+  
+  if (verticalSeparator && portraitMode) {
+    clockEl.classList.add("vertical-separator");
+  } else {
+    clockEl.classList.remove("vertical-separator");
+  }
+}
+
+function applyFullscreenMode(){
+  if (fullscreenMode) {
+    document.body.classList.add("fullscreen-mode");
+  } else {
+    document.body.classList.remove("fullscreen-mode");
+  }
+}
+
+function showControlsTemporarily() {
+  if (!fullscreenMode) return;
+  
+  document.body.classList.add("show-controls");
+  
+  clearTimeout(activityTimer);
+  activityTimer = setTimeout(() => {
+    document.body.classList.remove("show-controls");
+  }, 4000); // Hide after 4 seconds of inactivity
+}
+
+// Keyboard support - Esc to exit fullscreen
+function handleKeyPress(e) {
+  if (e.key === "Escape" && fullscreenMode) {
+    fullscreenMode = false;
+    localStorage.setItem("fullscreenMode", fullscreenMode);
+    const toggleFullscreen = document.getElementById("toggleFullscreen");
+    toggleFullscreen.classList.remove("active");
+    applyFullscreenMode();
+  }
+}
+
+applyFont();
+applyColorPreset();
+applyAnimations();
+applyPortraitMode();
+applyFullscreenMode();
+
+document.getElementById("ghost-seconds").addEventListener("click",()=>{
+  secondsOn = !secondsOn;
+  localStorage.setItem("secondsOn", secondsOn);
+  applyAnimations();
+});
+
+const ghostColorBtn = document.getElementById("ghost-color");
+const colorMenuEl = document.getElementById("color-menu");
+
+ghostColorBtn.addEventListener("click",()=>{
+  colorMenuEl.classList.add("active");
+  clearTimeout(window.cm);
+  window.cm = setTimeout(()=>colorMenuEl.classList.remove("active"), 5000);
+});
+
+document.querySelectorAll(".color-dot").forEach(dot=>{
+  dot.addEventListener("click",()=>{
+    currentPreset = dot.dataset.preset;
+    localStorage.setItem("colorPreset", currentPreset);
+    applyColorPreset();
+    colorMenuEl.classList.remove("active");
+  });
+});
+
+const ghostProBtn = document.getElementById("ghost-pro");
+const proPanelEl = document.getElementById("pro-panel");
+
+ghostProBtn.addEventListener("click",()=>{
+  proPanelEl.classList.toggle("active");
+});
+
+document.addEventListener("click",(e)=>{
+  if (!proPanelEl.contains(e.target) && !ghostProBtn.contains(e.target)){
+    proPanelEl.classList.remove("active");
+  }
+});
+
+const toggle12 = document.getElementById("toggle12");
+if (!use24h) toggle12.classList.add("active");
+
+toggle12.addEventListener("click",()=>{
+  use24h = !use24h;
+  localStorage.setItem("use24h", use24h);
+  toggle12.classList.toggle("active");
+  updateClock();
+});
+
+const togglePortrait = document.getElementById("togglePortrait");
+if (portraitMode) togglePortrait.classList.add("active");
+
+togglePortrait.addEventListener("click",()=>{
+  portraitMode = !portraitMode;
+  localStorage.setItem("portraitMode", portraitMode);
+  togglePortrait.classList.toggle("active");
+  applyPortraitMode();
+});
+
+const toggleVerticalSep = document.getElementById("toggleVerticalSep");
+if (verticalSeparator) toggleVerticalSep.classList.add("active");
+
+toggleVerticalSep.addEventListener("click",()=>{
+  verticalSeparator = !verticalSeparator;
+  localStorage.setItem("verticalSeparator", verticalSeparator);
+  toggleVerticalSep.classList.toggle("active");
+  applyPortraitMode();
+});
+
+const toggleFullscreen = document.getElementById("toggleFullscreen");
+if (fullscreenMode) toggleFullscreen.classList.add("active");
+
+toggleFullscreen.addEventListener("click",()=>{
+  fullscreenMode = !fullscreenMode;
+  localStorage.setItem("fullscreenMode", fullscreenMode);
+  toggleFullscreen.classList.toggle("active");
+  applyFullscreenMode();
+});
+
+// Click upper-left corner (2"x2" = ~150px x 150px) to exit fullscreen
+document.addEventListener("click", (e) => {
+  if (!fullscreenMode) return;
+  
+  // Check if click is in upper-left corner (150px x 150px)
+  if (e.clientX <= 150 && e.clientY <= 150) {
+    showControlsTemporarily();
+  }
+});
+
+// Keyboard - Esc exits fullscreen
+document.addEventListener("keydown", handleKeyPress);
+
+document.querySelectorAll('.font-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    currentFont = opt.dataset.font;
+    localStorage.setItem("clockFont", currentFont);
+    applyFont();
+  });
+});
+
+// Screenshot preset listeners
+document.querySelectorAll('.screenshot-preset').forEach(opt => {
+  opt.addEventListener('click', () => {
+    applyScreenshotPreset(opt.dataset.preset);
+  });
+});
+
+document.getElementById("freeze-zone").addEventListener("click", () => {
+  if (!screenshotMode) return;
+  const input = prompt("Freeze time (HH:MM:SS)");
+  if (!input || !/^\d\d[:\s]\d\d[:\s]\d\d$/.test(input)) return;
+
+  const [h, m, s] = input.split(/[:\s]/).map(Number);
+
+  const custom = new Date();
+  custom.setHours(h, m, s, 0);
+
+  frozen = true;
+  frozenTime = custom;
+
+  secondsEl.classList.remove("pulse");
+  mainColon.classList.remove("pulse");
+
+  updateClock();
+});
+
+document.getElementById("freeze-zone").addEventListener("dblclick", () => {
+  if (!screenshotMode) return;
+  frozen = false;
+  frozenTime = null;
+  applyAnimations();
+});
+
+</script>
+
+</body>
+</html>
